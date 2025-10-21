@@ -6,31 +6,52 @@
   <title>MapaFácil Market – Totem</title>
   <link rel="stylesheet" href="/css/style.css"/>
 </head>
-<body>
-  <header>
-    <div><strong>MapaFácil Market</strong> <span class="badge">Totem</span></div>
-    <nav class="toolbar">
-      <a class="button secondary" href="/admin">Admin</a>
-    </nav>
-  </header>
-  <div class="container">
-    <div class="row">
-      <div class="card">
-        <div class="toolbar">
-          <input class="input" id="query" placeholder="Busque por nome, categoria ou corredor"/>
-        </div>
-        <div id="mapWrap" class="map-wrap" style="margin-top:12px;">
-          <img id="mapImg" alt="Mapa" style="width:100%; height:auto; display:none; user-select:none; pointer-events:none;"/>
-          <div id="pins" style="position:absolute; inset:0;"></div>
-          <svg id="overlay" style="position:absolute; inset:0; pointer-events:none;" width="100%" height="100%"></svg>
-        </div>
+<body class="page page--totem">
+  <header class="app-header app-header--hero">
+    <div class="brand">
+      <div class="brand__logo" id="totemLogoWrap" hidden>
+        <img id="totemLogo" alt="Logo do totem"/>
       </div>
-      <div class="card">
-        <h3>Resultados</h3>
-        <div class="list" id="list"></div>
+      <div>
+        <span class="eyebrow">Bem-vindo(a) ao</span>
+        <h1 class="brand__title" id="totemBrandName">MapaFácil Market</h1>
+        <p class="muted">Use o buscador inteligente para encontrar produtos e veja o caminho a partir do totem.</p>
       </div>
     </div>
-  </div>
+    <nav class="toolbar">
+      <a class="button button--ghost" href="/admin">Admin</a>
+    </nav>
+  </header>
+
+  <main class="page-grid page-grid--totem">
+    <section class="card card--search">
+      <div class="card__body">
+        <label class="field field--stretch">
+          <span class="label">Busque por nome, categoria ou corredor</span>
+          <div class="search-bar">
+            <span class="search-bar__icon">🔍</span>
+            <input class="input input--search" id="query" placeholder="Ex: leite, padaria, corredor 5" autocomplete="off"/>
+          </div>
+        </label>
+      </div>
+      <div id="mapWrap" class="map-wrap map-wrap--tall">
+        <img id="mapImg" alt="Mapa" class="map-wrap__img"/>
+        <div id="pins" class="map-wrap__pins"></div>
+        <svg id="overlay" class="map-wrap__overlay" width="100%" height="100%"></svg>
+        <div class="map-wrap__hint">Toque em um item da lista para ver o caminho até ele.</div>
+      </div>
+    </section>
+
+    <section class="card card--results">
+      <div class="card__header">
+        <h2>Resultados</h2>
+        <p class="muted">Selecione um item para visualizar a rota no mapa.</p>
+      </div>
+      <div class="card__body">
+        <div class="list" id="list"></div>
+      </div>
+    </section>
+  </main>
 
   <script type="module">
     import { percentToPx, arrowHead } from '/js/utils.js';
@@ -41,16 +62,67 @@
     const overlay = document.getElementById('overlay');
     const list = document.getElementById('list');
     const queryEl = document.getElementById('query');
+    const totemBrandName = document.getElementById('totemBrandName');
+    const totemLogoWrap = document.getElementById('totemLogoWrap');
+    const totemLogo = document.getElementById('totemLogo');
 
     let products = [];
-    let config = { mapImage: "", entrance: {x:5,y:95} };
+    let config = { mapImage: "", entrance: {x:5,y:95}, theme: {} };
     let activeId = null;
+
+    const DEFAULT_THEME = {
+      primaryColor: '#2563eb',
+      secondaryColor: '#1d4ed8',
+      backgroundColor: '#f8fafc',
+      surfaceColor: '#ffffff',
+      textColor: '#0f172a',
+      accentColor: '#f97316',
+      logo: '',
+      brandName: 'MapaFácil Market'
+    };
 
     async function loadAll(){
       products = await (await fetch('/api/products')).json();
       config = await (await fetch('/api/config')).json();
+      applyTheme(config.theme);
       renderMap();
       renderList();
+    }
+
+    function applyTheme(theme = {}){
+      const merged = { ...DEFAULT_THEME, ...theme };
+      const root = document.documentElement;
+      root.style.setProperty('--primary-color', merged.primaryColor);
+      root.style.setProperty('--primary-color-strong', merged.secondaryColor || merged.primaryColor);
+      root.style.setProperty('--accent-color', merged.accentColor);
+      root.style.setProperty('--background-color', merged.backgroundColor);
+      root.style.setProperty('--surface-color', merged.surfaceColor);
+      root.style.setProperty('--text-color', merged.textColor);
+      root.style.setProperty('--text-muted', shadeColor(merged.textColor, 45));
+      totemBrandName.textContent = merged.brandName || DEFAULT_THEME.brandName;
+      if (merged.logo){
+        totemLogo.src = merged.logo;
+        totemLogoWrap.hidden = false;
+      } else {
+        totemLogo.src = '';
+        totemLogoWrap.hidden = true;
+      }
+      config.theme = merged;
+    }
+
+    function shadeColor(hex, percent){
+      if (!hex) return '#64748b';
+      const num = parseInt(hex.replace('#',''), 16);
+      const amt = Math.round(2.55 * percent);
+      const r = (num >> 16) + amt;
+      const g = (num >> 8 & 0x00FF) + amt;
+      const b = (num & 0x0000FF) + amt;
+      return '#' + (
+        0x1000000 +
+        (r<255?(r<0?0:r):255)*0x10000 +
+        (g<255?(g<0?0:g):255)*0x100 +
+        (b<255?(b<0?0:b):255)
+      ).toString(16).slice(1);
     }
 
     function renderMap(){
@@ -70,35 +142,28 @@
         if (p && p.x!=null && p.y!=null){
           const px = percentToPx(mapWrap, {x:p.x, y:p.y});
           addPin(px.x, px.y, p.name);
-          // linha tracejada + seta
           const line = document.createElementNS('http://www.w3.org/2000/svg','line');
           line.setAttribute('x1', entPx.x); line.setAttribute('y1', entPx.y);
           line.setAttribute('x2', px.x);    line.setAttribute('y2', px.y);
-          line.setAttribute('stroke', 'black');
-          line.setAttribute('stroke-width', '2');
-          line.setAttribute('stroke-dasharray', '6 6');
+          line.setAttribute('stroke', 'var(--primary-color)');
+          line.setAttribute('stroke-width', '3');
+          line.setAttribute('stroke-dasharray', '8 8');
           overlay.appendChild(line);
           const poly = document.createElementNS('http://www.w3.org/2000/svg','polygon');
           poly.setAttribute('points', arrowHead(entPx, px));
-          poly.setAttribute('fill', 'black');
+          poly.setAttribute('fill', 'var(--primary-color)');
           overlay.appendChild(poly);
 
-          // bolinha animada indo/voltando (CSS animation via SMIL fallback simples)
           const dot = document.createElement('div');
-          dot.style.position = 'absolute';
-          dot.style.width = '8px';
-          dot.style.height = '8px';
-          dot.style.borderRadius = '999px';
-          dot.style.background = '#111';
-          dot.style.transition = 'all 1.2s ease-in-out';
+          dot.className = 'path-dot';
           pins.appendChild(dot);
           let forward = true;
           setInterval(()=>{
-            if (forward) { dot.style.left = px.x-4+'px'; dot.style.top = px.y-4+'px'; }
-            else { dot.style.left = entPx.x-4+'px'; dot.style.top = entPx.y-4+'px'; }
+            if (forward) { dot.style.left = px.x-6+'px'; dot.style.top = px.y-6+'px'; }
+            else { dot.style.left = entPx.x-6+'px'; dot.style.top = entPx.y-6+'px'; }
             forward = !forward;
           }, 1200);
-          dot.style.left = entPx.x-4+'px'; dot.style.top = entPx.y-4+'px';
+          dot.style.left = entPx.x-6+'px'; dot.style.top = entPx.y-6+'px';
         }
       }
     }
@@ -108,7 +173,7 @@
       pin.className = 'pin';
       pin.style.left = x+'px';
       pin.style.top = y+'px';
-      pin.innerHTML = '<div class=\"pin-pulse\"></div><div class=\"pin-dot\"></div><div class=\"pin-label\">'+label+'</div>';
+      pin.innerHTML = '<div class="pin-pulse"></div><div class="pin-dot"></div><div class="pin-label">'+label+'</div>';
       pins.appendChild(pin);
     }
 
@@ -120,25 +185,26 @@
       });
       if (items.length===0){
         const empty = document.createElement('div');
-        empty.className = 'small';
-        empty.textContent = 'Nada encontrado.';
+        empty.className = 'empty-state';
+        empty.innerHTML = '<strong>Nada encontrado.</strong><p class="muted">Tente outros termos ou confira se o produto está cadastrado.</p>';
         list.appendChild(empty);
         return;
       }
       items.forEach(p=>{
-        const item = document.createElement('div');
-        item.className = 'item';
+        const item = document.createElement('button');
+        item.className = 'result-card';
+        item.setAttribute('type','button');
         item.innerHTML = `
-          <div style="display:flex; align-items:center; gap:10px;">
-            ${p.photo? `<img src="${p.photo}" style="width:48px;height:48px;object-fit:cover;border-radius:8px;"/>` : `<div style="width:48px;height:48px;background:#e5e7eb;border-radius:8px;"></div>`}
-            <div style="flex:1">
-              <div><strong>${p.name}</strong></div>
-              <div class="small">${p.category || 'Sem categoria'} ${p.aisle? ' • Corredor '+p.aisle:''} ${p.shelf? ' • Prateleira '+p.shelf:''} ${p.side? ' • '+p.side:''}</div>
-            </div>
-            <button class="button secondary" data-act="ver">ver no mapa</button>
+          <div class="result-card__media">
+            ${p.photo? `<img src="${p.photo}" alt="${p.name}"/>` : `<div class="result-card__placeholder">${((p.name||'').charAt(0) || '?').toUpperCase()}</div>`}
           </div>
+          <div class="result-card__content">
+            <div class="result-card__title">${p.name}</div>
+            <div class="result-card__meta">${p.category || 'Sem categoria'} ${p.aisle? ' • Corredor '+p.aisle:''} ${p.shelf? ' • Prateleira '+p.shelf:''} ${p.side? ' • '+p.side:''}</div>
+          </div>
+          <span class="result-card__cta">Ver rota →</span>
         `;
-        item.querySelector('[data-act="ver"]').onclick = () => { activeId = p.id; renderMap(); };
+        item.onclick = () => { activeId = p.id; renderMap(); };
         list.appendChild(item);
       });
     }

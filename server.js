@@ -23,14 +23,35 @@ if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR);
 const PRODUCTS_FILE = path.join(DATA_DIR, 'products.json');
 const CONFIG_FILE = path.join(DATA_DIR, 'config.json');
 
+const DEFAULT_CONFIG = {
+  mapImage: "",
+  entrance: { x: 5, y: 95 },
+  theme: {
+    primaryColor: "#2563eb",
+    secondaryColor: "#1d4ed8",
+    backgroundColor: "#f8fafc",
+    surfaceColor: "#ffffff",
+    textColor: "#0f172a",
+    accentColor: "#f97316",
+    logo: "",
+    brandName: "MapaFácil Market"
+  }
+};
+
 // Ensure files
 function ensureFiles() {
   if (!fs.existsSync(PRODUCTS_FILE)) fs.writeFileSync(PRODUCTS_FILE, JSON.stringify([], null, 2));
   if (!fs.existsSync(CONFIG_FILE)) {
-    fs.writeFileSync(CONFIG_FILE, JSON.stringify({
-      mapImage: "", // /uploads/map.png
-      entrance: { x: 5, y: 95 } // percentage
-    }, null, 2));
+    fs.writeFileSync(CONFIG_FILE, JSON.stringify(DEFAULT_CONFIG, null, 2));
+  } else {
+    const current = readJSON(CONFIG_FILE) || {};
+    const next = {
+      ...DEFAULT_CONFIG,
+      ...current,
+      entrance: { ...DEFAULT_CONFIG.entrance, ...(current.entrance || {}) },
+      theme: { ...DEFAULT_CONFIG.theme, ...(current.theme || {}) }
+    };
+    writeJSON(CONFIG_FILE, next);
   }
 }
 ensureFiles();
@@ -57,8 +78,9 @@ const storage = multer.diskStorage({
     cb(null, UPLOAD_DIR);
   },
   filename: function (req, file, cb) {
-    const ext = path.extname(file.originalname) || '.png';
-    cb(null, 'map' + ext.toLowerCase());
+    const ext = (path.extname(file.originalname) || '.png').toLowerCase();
+    const base = file.fieldname === 'logo' ? 'logo' : 'map';
+    cb(null, `${base}${ext}`);
   }
 });
 const upload = multer({ storage });
@@ -106,12 +128,29 @@ app.delete('/api/products/:id', (req, res) => {
 });
 
 app.get('/api/config', (req, res) => {
-  res.json(readJSON(CONFIG_FILE));
+  const current = readJSON(CONFIG_FILE);
+  const next = {
+    ...DEFAULT_CONFIG,
+    ...current,
+    entrance: { ...DEFAULT_CONFIG.entrance, ...(current.entrance || {}) },
+    theme: { ...DEFAULT_CONFIG.theme, ...(current.theme || {}) }
+  };
+  writeJSON(CONFIG_FILE, next);
+  res.json(next);
 });
 
 app.put('/api/config', (req, res) => {
   const current = readJSON(CONFIG_FILE);
-  const next = { ...current, ...req.body };
+  const next = {
+    ...current,
+    ...req.body
+  };
+  if (req.body?.entrance) {
+    next.entrance = { ...current.entrance, ...req.body.entrance };
+  }
+  if (req.body?.theme) {
+    next.theme = { ...current.theme, ...req.body.theme };
+  }
   writeJSON(CONFIG_FILE, next);
   res.json(next);
 });
@@ -123,6 +162,14 @@ app.post('/api/upload-map', upload.single('map'), (req, res) => {
   const next = { ...current, mapImage };
   writeJSON(CONFIG_FILE, next);
   res.json({ ok: true, mapImage });
+});
+
+app.post('/api/upload-logo', upload.single('logo'), (req, res) => {
+  const current = readJSON(CONFIG_FILE);
+  const logo = '/uploads/' + req.file.filename;
+  const next = { ...current, theme: { ...current.theme, logo } };
+  writeJSON(CONFIG_FILE, next);
+  res.json({ ok: true, logo });
 });
 
 // Fallback to index.html

@@ -6,69 +6,180 @@
   <title>MapaFácil Market – Admin</title>
   <link rel="stylesheet" href="/css/style.css"/>
 </head>
-<body>
-  <header>
-    <div><strong>MapaFácil Market</strong> <span class="badge">Admin</span></div>
+<body class="page page--admin">
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand__logo" id="adminLogoWrap" hidden>
+        <img id="adminLogo" alt="Logo do totem"/>
+      </div>
+      <div>
+        <span class="eyebrow">Painel administrativo</span>
+        <h1 class="brand__title" id="adminBrandName">MapaFácil Market</h1>
+        <p class="muted">Gerencie o mapa da loja, catálogo de produtos e a identidade visual exibida no totem.</p>
+      </div>
+    </div>
     <nav class="toolbar">
-      <a class="button secondary" href="/totem">Abrir Totem</a>
+      <a class="button button--ghost" href="/totem">Abrir Totem</a>
     </nav>
   </header>
-  <div class="container">
-    <div class="row">
-      <div class="card">
-        <div class="toolbar">
-          <div>
-            <label class="label">Upload do mapa (imagem)</label>
-            <input class="file" type="file" id="fileMap" accept="image/*"/>
-          </div>
-          <div>
-            <label class="label">Posição Totem/Entrada</label>
-            <button class="button secondary" id="btnEntrada">Selecionar no mapa</button>
-            <span id="entradaPos" class="small"></span>
-          </div>
-          <div style="margin-left:auto">
-            <button class="button secondary" id="btnLimpar">Limpar tudo</button>
-          </div>
-        </div>
-        <div id="mapWrap" class="map-wrap" style="margin-top:12px;">
-          <img id="mapImg" alt="Mapa" style="width:100%; height:auto; display:none; user-select:none; pointer-events:none;"/>
-          <div id="pins" style="position:absolute; inset:0;"></div>
-          <svg id="overlay" style="position:absolute; inset:0; pointer-events:none;" width="100%" height="100%"></svg>
-        </div>
-        <div class="small" style="margin-top:8px;">Dica: clique no mapa para posicionar o item selecionado ou o Totem/Entrada.</div>
-      </div>
-      <div class="card">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <h3>Cadastro de produto</h3>
-          <button class="button secondary" id="btnNovo">Novo</button>
-        </div>
-        <div class="hr"></div>
+
+  <main class="page-grid">
+    <section class="card card--map">
+      <div class="card__header">
         <div>
-          <label class="label">Nome</label>
-          <input class="input" id="name"/>
-          <label class="label">Categoria</label>
-          <input class="input" id="category"/>
-          <div class="row" style="grid-template-columns:repeat(3,1fr)">
-            <div><label class="label">Corredor</label><input class="input" id="aisle"/></div>
-            <div><label class="label">Prateleira</label><input class="input" id="shelf"/></div>
-            <div><label class="label">Lado</label><input class="input" id="side"/></div>
-          </div>
-          <label class="label">URL da foto (opcional)</label>
-          <input class="input" id="photo"/>
-          <div class="toolbar" style="margin-top:10px">
-            <button class="button" id="btnSalvar">Adicionar/Salvar</button>
+          <h2>Mapa interativo</h2>
+          <p class="muted">Carregue a planta da loja e defina onde o totem está localizado para orientar os clientes.</p>
+        </div>
+        <button class="button button--ghost danger" id="btnLimpar">Limpar tudo</button>
+      </div>
+      <div class="card__body">
+        <div class="inputs-grid">
+          <label class="field">
+            <span class="label">Upload do mapa (imagem)</span>
+            <input class="input" type="file" id="fileMap" accept="image/*"/>
+          </label>
+          <div class="field">
+            <span class="label">Posição do Totem/Entrada</span>
+            <div class="field__inline">
+              <button class="button button--ghost" id="btnEntrada">Selecionar no mapa</button>
+              <span id="entradaPos" class="chip"></span>
+            </div>
           </div>
         </div>
-        <div class="hr"></div>
-        <h3>Itens & posições</h3>
-        <div class="toolbar">
-          <button class="button secondary" id="btnSelEntrada">Totem/Entrada</button>
-          <span id="selInfo" class="small"></span>
+        <div id="mapWrap" class="map-wrap">
+          <img id="mapImg" alt="Mapa" class="map-wrap__img"/>
+          <div id="pins" class="map-wrap__pins"></div>
+          <svg id="overlay" class="map-wrap__overlay" width="100%" height="100%"></svg>
+          <div class="map-wrap__hint">Clique no mapa para posicionar o item selecionado ou o Totem/Entrada.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card card--catalog">
+      <div class="card__header">
+        <div>
+          <h2>Cadastro de produto</h2>
+          <p class="muted">Preencha os campos abaixo para adicionar ou editar itens do catálogo.</p>
+        </div>
+        <button class="button button--ghost" id="btnNovo">Novo</button>
+      </div>
+      <div class="card__body">
+        <div class="inputs-grid inputs-grid--triple">
+          <label class="field">
+            <span class="label">Nome</span>
+            <input class="input" id="name" placeholder="Ex: Arroz Integral"/>
+          </label>
+          <label class="field">
+            <span class="label">Categoria</span>
+            <input class="input" id="category" placeholder="Ex: Mercearia"/>
+          </label>
+          <label class="field">
+            <span class="label">URL da foto (opcional)</span>
+            <input class="input" id="photo" placeholder="https://"/>
+          </label>
+        </div>
+        <div class="inputs-grid inputs-grid--compact">
+          <label class="field">
+            <span class="label">Corredor</span>
+            <input class="input" id="aisle" placeholder="Ex: 3"/>
+          </label>
+          <label class="field">
+            <span class="label">Prateleira</span>
+            <input class="input" id="shelf" placeholder="Ex: Superior"/>
+          </label>
+          <label class="field">
+            <span class="label">Lado</span>
+            <input class="input" id="side" placeholder="Ex: Direito"/>
+          </label>
+        </div>
+        <div class="toolbar toolbar--end">
+          <button class="button" id="btnSalvar">Adicionar / Salvar</button>
+        </div>
+      </div>
+      <div class="card__footer">
+        <div class="list__header">
+          <h3>Itens &amp; posições</h3>
+          <div class="toolbar">
+            <button class="button button--ghost" id="btnSelEntrada">Totem/Entrada</button>
+            <span id="selInfo" class="muted"></span>
+          </div>
         </div>
         <div class="list" id="list"></div>
       </div>
-    </div>
-  </div>
+    </section>
+
+    <section class="card card--theme">
+      <div class="card__header">
+        <div>
+          <h2>Identidade visual do totem</h2>
+          <p class="muted">Escolha as cores, o nome da marca e o logotipo para personalizar a experiência do cliente.</p>
+        </div>
+      </div>
+      <div class="card__body theme-grid">
+        <div class="theme-controls">
+          <label class="field">
+            <span class="label">Nome da marca</span>
+            <input class="input" id="brandName" placeholder="Como seu cliente verá o totem"/>
+          </label>
+          <div class="theme-colors">
+            <label class="field">
+              <span class="label">Cor primária</span>
+              <input type="color" id="themePrimary"/>
+            </label>
+            <label class="field">
+              <span class="label">Cor secundária</span>
+              <input type="color" id="themeSecondary"/>
+            </label>
+            <label class="field">
+              <span class="label">Cor de destaque</span>
+              <input type="color" id="themeAccent"/>
+            </label>
+            <label class="field">
+              <span class="label">Plano de fundo</span>
+              <input type="color" id="themeBackground"/>
+            </label>
+            <label class="field">
+              <span class="label">Cartões / superfícies</span>
+              <input type="color" id="themeSurface"/>
+            </label>
+            <label class="field">
+              <span class="label">Texto</span>
+              <input type="color" id="themeText"/>
+            </label>
+          </div>
+          <label class="field">
+            <span class="label">Logo do Totem</span>
+            <div class="logo-picker">
+              <div class="logo-picker__preview" id="themeLogoPreview">Nenhum logo definido</div>
+              <label class="button button--ghost">
+                <input type="file" id="themeLogo" accept="image/*" hidden/>
+                Enviar imagem
+              </label>
+            </div>
+          </label>
+        </div>
+        <div class="theme-preview" aria-hidden="true">
+          <div class="preview-card">
+            <div class="preview-card__header">
+              <div class="preview-card__logo" id="themePreviewLogo"></div>
+              <div>
+                <span class="preview-card__eyebrow">Você está em</span>
+                <strong class="preview-card__title" id="themePreviewBrand">MapaFácil Market</strong>
+              </div>
+            </div>
+            <div class="preview-card__body">
+              <div class="preview-card__tag">Busca inteligente</div>
+              <p>Encontre qualquer produto digitando nome, categoria ou corredor.</p>
+              <div class="preview-card__actions">
+                <span class="preview-card__pin">Totem pronto!</span>
+                <span class="preview-card__accent"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
 
   <script type="module">
     import { pointerToPercent, percentToPx } from '/js/utils.js';
@@ -96,9 +207,36 @@
     const sideEl = document.getElementById('side');
     const photoEl = document.getElementById('photo');
 
+    const brandNameEl = document.getElementById('brandName');
+    const themePrimaryEl = document.getElementById('themePrimary');
+    const themeSecondaryEl = document.getElementById('themeSecondary');
+    const themeAccentEl = document.getElementById('themeAccent');
+    const themeBackgroundEl = document.getElementById('themeBackground');
+    const themeSurfaceEl = document.getElementById('themeSurface');
+    const themeTextEl = document.getElementById('themeText');
+    const themeLogoEl = document.getElementById('themeLogo');
+    const themeLogoPreview = document.getElementById('themeLogoPreview');
+    const themePreviewLogo = document.getElementById('themePreviewLogo');
+    const themePreviewBrand = document.getElementById('themePreviewBrand');
+    const adminBrandName = document.getElementById('adminBrandName');
+    const adminLogoWrap = document.getElementById('adminLogoWrap');
+    const adminLogo = document.getElementById('adminLogo');
+
     let products = [];
-    let config = { mapImage: "", entrance: {x:5, y:95} };
+    let config = { mapImage: "", entrance: {x:5, y:95}, theme: {} };
     let selected = { type: null, id: null }; // type: 'product'|'entrance'|null
+    let themeSaveTimeout = null;
+
+    const DEFAULT_THEME = {
+      primaryColor: '#2563eb',
+      secondaryColor: '#1d4ed8',
+      backgroundColor: '#f8fafc',
+      surfaceColor: '#ffffff',
+      textColor: '#0f172a',
+      accentColor: '#f97316',
+      logo: '',
+      brandName: 'MapaFácil Market'
+    };
 
     async function loadAll(){
       products = await (await fetch('/api/products')).json();
@@ -106,11 +244,120 @@
       renderMap();
       renderList();
       updateEntradaLabel();
+      fillThemeForm();
+      applyTheme(config.theme);
     }
 
     function updateEntradaLabel(){
       entradaPos.textContent = `(${config.entrance.x.toFixed(1)}%, ${config.entrance.y.toFixed(1)}%)`;
     }
+
+    function applyTheme(theme = {}){
+      const merged = { ...DEFAULT_THEME, ...theme };
+      const root = document.documentElement;
+      root.style.setProperty('--primary-color', merged.primaryColor);
+      root.style.setProperty('--primary-color-strong', merged.secondaryColor || merged.primaryColor);
+      root.style.setProperty('--accent-color', merged.accentColor);
+      root.style.setProperty('--background-color', merged.backgroundColor);
+      root.style.setProperty('--surface-color', merged.surfaceColor);
+      root.style.setProperty('--text-color', merged.textColor);
+      root.style.setProperty('--text-muted', shadeColor(merged.textColor, 45));
+      adminBrandName.textContent = merged.brandName || DEFAULT_THEME.brandName;
+      themePreviewBrand.textContent = merged.brandName || DEFAULT_THEME.brandName;
+      if (merged.logo){
+        adminLogo.src = merged.logo;
+        adminLogoWrap.hidden = false;
+        themePreviewLogo.style.backgroundImage = `url(${merged.logo})`;
+        themePreviewLogo.classList.add('has-image');
+        themeLogoPreview.innerHTML = `<img src="${merged.logo}" alt="Logo"/>`;
+        themePreviewLogo.textContent = '';
+      } else {
+        adminLogoWrap.hidden = true;
+        adminLogo.src = '';
+        themePreviewLogo.style.backgroundImage = '';
+        themePreviewLogo.classList.remove('has-image');
+        themeLogoPreview.textContent = 'Nenhum logo definido';
+        themePreviewLogo.textContent = (merged.brandName || DEFAULT_THEME.brandName).charAt(0) || 'M';
+      }
+      config.theme = merged;
+    }
+
+    function shadeColor(hex, percent){
+      if (!hex) return '#64748b';
+      const num = parseInt(hex.replace('#',''), 16);
+      const amt = Math.round(2.55 * percent);
+      const r = (num >> 16) + amt;
+      const g = (num >> 8 & 0x00FF) + amt;
+      const b = (num & 0x0000FF) + amt;
+      return '#' + (
+        0x1000000 +
+        (r<255?(r<0?0:r):255)*0x10000 +
+        (g<255?(g<0?0:g):255)*0x100 +
+        (b<255?(b<0?0:b):255)
+      ).toString(16).slice(1);
+    }
+
+    function fillThemeForm(){
+      const theme = { ...DEFAULT_THEME, ...(config.theme || {}) };
+      brandNameEl.value = theme.brandName || '';
+      themePrimaryEl.value = theme.primaryColor || DEFAULT_THEME.primaryColor;
+      themeSecondaryEl.value = theme.secondaryColor || DEFAULT_THEME.secondaryColor;
+      themeAccentEl.value = theme.accentColor || DEFAULT_THEME.accentColor;
+      themeBackgroundEl.value = theme.backgroundColor || DEFAULT_THEME.backgroundColor;
+      themeSurfaceEl.value = theme.surfaceColor || DEFAULT_THEME.surfaceColor;
+      themeTextEl.value = theme.textColor || DEFAULT_THEME.textColor;
+      if (theme.logo){
+        themeLogoPreview.innerHTML = `<img src="${theme.logo}" alt="Logo"/>`;
+      } else {
+        themeLogoPreview.textContent = 'Nenhum logo definido';
+      }
+    }
+
+    function saveThemeDebounced(){
+      clearTimeout(themeSaveTimeout);
+      themeSaveTimeout = setTimeout(async () => {
+        await fetch('/api/config', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ theme: config.theme })
+        });
+      }, 300);
+    }
+
+    const themeInputs = [
+      [themePrimaryEl, 'primaryColor'],
+      [themeSecondaryEl, 'secondaryColor'],
+      [themeAccentEl, 'accentColor'],
+      [themeBackgroundEl, 'backgroundColor'],
+      [themeSurfaceEl, 'surfaceColor'],
+      [themeTextEl, 'textColor']
+    ];
+    themeInputs.forEach(([input, key]) => {
+      input.addEventListener('input', (e) => {
+        config.theme[key] = e.target.value;
+        applyTheme(config.theme);
+        saveThemeDebounced();
+      });
+    });
+
+    brandNameEl.addEventListener('input', (e) => {
+      config.theme.brandName = e.target.value;
+      applyTheme(config.theme);
+      saveThemeDebounced();
+    });
+
+    themeLogoEl.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const fd = new FormData();
+      fd.append('logo', file);
+      const res = await fetch('/api/upload-logo', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data?.logo){
+        config.theme.logo = data.logo;
+        applyTheme(config.theme);
+      }
+    });
 
     function renderMap(){
       overlay.innerHTML = '';
@@ -136,26 +383,33 @@
       pin.className = 'pin';
       pin.style.left = x+'px';
       pin.style.top = y+'px';
-      pin.innerHTML = '<div class=\"pin-pulse\"></div><div class=\"pin-dot\"></div><div class=\"pin-label\">'+label+'</div>';
+      pin.innerHTML = '<div class="pin-pulse"></div><div class="pin-dot"></div><div class="pin-label">'+label+'</div>';
       pins.appendChild(pin);
     }
 
     function renderList(){
       list.innerHTML = '';
+      if (products.length === 0){
+        const empty = document.createElement('div');
+        empty.className = 'empty-state';
+        empty.innerHTML = '<strong>Nenhum produto cadastrado.</strong><p class="muted">Adicione itens para que apareçam no totem.</p>';
+        list.appendChild(empty);
+        return;
+      }
       products.forEach(p=>{
         const item = document.createElement('div');
         item.className = 'item';
         item.innerHTML = `
-          <div style="display:flex; justify-content:space-between; gap:10px; align-items:center;">
+          <div class="item__info">
             <div>
-              <div><strong>${p.name}</strong></div>
-              <div class="small">${p.category || '—'} ${p.aisle? ' • Corredor '+p.aisle:''} ${p.shelf? ' • Prateleira '+p.shelf:''} ${p.side? ' • '+p.side:''}</div>
-              <div class="small">${(p.x!=null && p.y!=null)? ('pos: '+p.x.toFixed(1)+'%, '+p.y.toFixed(1)+'%') : 'sem posição'}</div>
+              <div class="item__title">${p.name}</div>
+              <div class="item__meta">${p.category || '—'} ${p.aisle? ' • Corredor '+p.aisle:''} ${p.shelf? ' • Prateleira '+p.shelf:''} ${p.side? ' • '+p.side:''}</div>
+              <div class="item__meta">${(p.x!=null && p.y!=null)? ('pos: '+p.x.toFixed(1)+'%, '+p.y.toFixed(1)+'%') : 'Sem posição'}</div>
             </div>
             <div class="toolbar">
-              <button class="button secondary" data-act="edit">Editar</button>
-              <button class="button secondary" data-act="pos">Posicionar</button>
-              <button class="button secondary" data-act="del" style="border-color:#e11d48;color:#e11d48">Excluir</button>
+              <button class="button button--ghost" data-act="edit">Editar</button>
+              <button class="button button--ghost" data-act="pos">Posicionar</button>
+              <button class="button button--ghost danger" data-act="del">Excluir</button>
             </div>
           </div>
         `;
@@ -254,15 +508,10 @@
     btnLimpar.onclick = async () => {
       if (!confirm('Apagar mapa e catálogo?')) return;
       await fetch('/api/config', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ mapImage: "", entrance: {x:5,y:95} }) });
-      // reset files locally
       await fetch('/api/products'); // no-op
-      // Hard reset on disk by overwriting files
-      // Not exposed here; manual cleanup not needed, we'll just set empty state:
       products = [];
       config.mapImage = "";
       config.entrance = {x:5,y:95};
-      await fetch('/api/products'); // keep API warm
-      // Re-render
       renderMap(); renderList(); updateEntradaLabel();
     };
 
