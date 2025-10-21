@@ -105,6 +105,22 @@ a {
   gap: 24px;
 }
 
+.page--admin .page-grid {
+  gap: clamp(32px, 5vw, 64px);
+  padding-bottom: clamp(32px, 6vw, 96px);
+}
+
+@media (min-width: 1120px) {
+  .page--admin .page-grid {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    align-items: start;
+  }
+
+  .page--admin .card--theme {
+    grid-column: 1 / -1;
+  }
+}
+
 .page-grid--totem {
   grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
   align-items: start;
@@ -135,6 +151,12 @@ a {
   gap: 18px;
 }
 
+.page--admin .card__header,
+.page--admin .card__body,
+.page--admin .card__footer {
+  gap: clamp(20px, 2.4vw, 32px);
+}
+
 .card__header {
   border-bottom: 1px solid rgba(15, 23, 42, 0.06);
 }
@@ -147,6 +169,10 @@ a {
   display: grid;
   gap: 16px;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.page--admin .inputs-grid {
+  gap: clamp(18px, 2.8vw, 28px);
 }
 
 .inputs-grid--triple {
@@ -426,10 +452,18 @@ button, input[type="file"] {
   gap: 20px;
 }
 
+.page--admin .theme-controls {
+  gap: clamp(24px, 3vw, 36px);
+}
+
 .theme-colors {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 16px;
+}
+
+.page--admin .theme-colors {
+  gap: clamp(18px, 2.4vw, 26px);
 }
 
 .logo-picker {
