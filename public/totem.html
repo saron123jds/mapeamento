@@ -369,6 +369,7 @@
     });
 
     function renderMap(){
+      if (!mapWrap || !overlay || !pins) return;
       overlay.innerHTML = '';
       pins.innerHTML = '';
       stopDotAnimation();
@@ -462,6 +463,7 @@
     }
 
     function renderList(){
+      if (!list) return;
       list.innerHTML = '';
       list.scrollTop = 0;
       if (!dataLoaded){
@@ -518,12 +520,14 @@
       document.addEventListener(evt, handleUserActivity, { passive: true });
     });
 
-    queryEl.addEventListener('input', () => {
-      renderList();
-      handleUserActivity();
-    });
+    if (queryEl){
+      queryEl.addEventListener('input', () => {
+        renderList();
+        handleUserActivity();
+      });
 
-    queryEl.addEventListener('focus', handleUserActivity);
+      queryEl.addEventListener('focus', handleUserActivity);
+    }
 
     showWelcomeScreen();
     loadAll();
