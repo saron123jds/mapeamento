@@ -263,26 +263,28 @@
       canvas.height = img.naturalHeight;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0);
-      const cellSize = Math.max(3, Math.round(Math.min(canvas.width, canvas.height) / 180));
+      const cellSize = Math.max(2, Math.round(Math.min(canvas.width, canvas.height) / 220));
       const cols = Math.max(1, Math.floor(canvas.width / cellSize));
       const rows = Math.max(1, Math.floor(canvas.height / cellSize));
       const grid = Array.from({ length: rows }, () => Array(cols).fill(false));
       const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      const samples = [];
+      const steps = [0.15, 0.35, 0.5, 0.65, 0.85];
+      for (const sy of steps){
+        for (const sx of steps){
+          samples.push([sx, sy]);
+        }
+      }
+      const isVeryWhite = (r, g, b) => {
+        const maxCh = Math.max(r, g, b);
+        const minCh = Math.min(r, g, b);
+        return maxCh >= 242 && (maxCh - minCh) <= 12 && (r + g + b) / 3 >= 244;
+      };
       for (let row = 0; row < rows; row++){
         for (let col = 0; col < cols; col++){
           let brightCount = 0;
           let sampleCount = 0;
-          const samples = [
-            [0.5, 0.5],
-            [0.2, 0.5],
-            [0.8, 0.5],
-            [0.5, 0.2],
-            [0.5, 0.8],
-            [0.2, 0.2],
-            [0.8, 0.2],
-            [0.2, 0.8],
-            [0.8, 0.8]
-          ];
+          let hasDark = false;
           for (const [sx, sy] of samples){
             const px = Math.min(canvas.width - 1, Math.floor((col + sx) * cellSize));
             const py = Math.min(canvas.height - 1, Math.floor((row + sy) * cellSize));
@@ -290,16 +292,74 @@
             const alpha = data[idx + 3] / 255;
             if (alpha < 0.05) continue;
             sampleCount++;
-            const brightness = (data[idx] + data[idx + 1] + data[idx + 2]) / (3 * 255);
-            if (brightness >= 0.93){
+            const r = data[idx];
+            const g = data[idx + 1];
+            const b = data[idx + 2];
+            const brightness = (r + g + b) / (3 * 255);
+            if (brightness <= 0.8){
+              hasDark = true;
+            }
+            if (isVeryWhite(r, g, b)){
               brightCount++;
             }
           }
-          grid[row][col] = sampleCount > 0 && (brightCount / sampleCount) >= 0.8;
+          grid[row][col] = sampleCount > 0 && !hasDark && brightCount >= Math.ceil(sampleCount * 0.75);
+        }
+      }
+      const inBounds = (x, y) => x >= 0 && y >= 0 && x < cols && y < rows;
+      const localKey = (x, y) => `${x},${y}`;
+      const entrancePx = {
+        x: clamp(Math.floor(((config.entrance?.x ?? 0) / 100) * canvas.width / cellSize), 0, cols - 1),
+        y: clamp(Math.floor(((config.entrance?.y ?? 0) / 100) * canvas.height / cellSize), 0, rows - 1)
+      };
+      const findNearestWalkableCell = (start) => {
+        if (grid[start.y][start.x]) return start;
+        const queue = [start];
+        const seen = new Set([localKey(start.x, start.y)]);
+        const dirs = [
+          {x:1,y:0}, {x:-1,y:0}, {x:0,y:1}, {x:0,y:-1}
+        ];
+        while (queue.length){
+          const current = queue.shift();
+          for (const dir of dirs){
+            const nx = current.x + dir.x;
+            const ny = current.y + dir.y;
+            if (!inBounds(nx, ny)) continue;
+            const key = localKey(nx, ny);
+            if (seen.has(key)) continue;
+            seen.add(key);
+            if (grid[ny][nx]){
+              return { x: nx, y: ny };
+            }
+            queue.push({ x: nx, y: ny });
+          }
+        }
+        return null;
+      };
+      const startCell = findNearestWalkableCell(entrancePx);
+      const reachable = Array.from({ length: rows }, () => Array(cols).fill(false));
+      if (startCell){
+        const queue = [startCell];
+        const seen = new Set([localKey(startCell.x, startCell.y)]);
+        const dirs = [
+          {x:1,y:0}, {x:-1,y:0}, {x:0,y:1}, {x:0,y:-1}
+        ];
+        while (queue.length){
+          const { x, y } = queue.shift();
+          reachable[y][x] = true;
+          for (const dir of dirs){
+            const nx = x + dir.x;
+            const ny = y + dir.y;
+            if (!inBounds(nx, ny) || !grid[ny][nx]) continue;
+            const key = localKey(nx, ny);
+            if (seen.has(key)) continue;
+            seen.add(key);
+            queue.push({ x: nx, y: ny });
+          }
         }
       }
       walkableGrid = {
-        grid,
+        grid: reachable,
         rows,
         cols,
         cellSize,
