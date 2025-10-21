@@ -54,7 +54,7 @@
   </main>
 
   <script type="module">
-    import { percentToPx, arrowHead } from '/js/utils.js';
+    import { percentToPx, arrowHead, clamp } from '/js/utils.js';
 
     const img = document.getElementById('mapImg');
     const mapWrap = document.getElementById('mapWrap');
@@ -69,6 +69,10 @@
     let products = [];
     let config = { mapImage: "", entrance: {x:5,y:95}, theme: {} };
     let activeId = null;
+    let walkableGrid = null;
+    let dotAnimationId = null;
+    let activeDot = null;
+    let currentMapImage = '';
 
     const DEFAULT_THEME = {
       primaryColor: '#2563eb',
@@ -125,14 +129,31 @@
       ).toString(16).slice(1);
     }
 
+    img.addEventListener('load', () => {
+      analyzeWalkableGrid();
+      renderMap();
+    });
+
+    img.addEventListener('error', () => {
+      walkableGrid = null;
+      renderMap();
+    });
+
     function renderMap(){
       overlay.innerHTML = '';
       pins.innerHTML = '';
+      stopDotAnimation();
       if (config.mapImage){
-        img.src = config.mapImage;
+        if (currentMapImage !== config.mapImage){
+          currentMapImage = config.mapImage;
+          walkableGrid = null;
+          img.src = config.mapImage;
+        }
         img.style.display = 'block';
       } else {
         img.style.display = 'none';
+        currentMapImage = '';
+        walkableGrid = null;
       }
       const entPx = percentToPx(mapWrap, config.entrance);
       addPin(entPx.x, entPx.y, 'Você está aqui');
@@ -142,28 +163,51 @@
         if (p && p.x!=null && p.y!=null){
           const px = percentToPx(mapWrap, {x:p.x, y:p.y});
           addPin(px.x, px.y, p.name);
-          const line = document.createElementNS('http://www.w3.org/2000/svg','line');
-          line.setAttribute('x1', entPx.x); line.setAttribute('y1', entPx.y);
-          line.setAttribute('x2', px.x);    line.setAttribute('y2', px.y);
-          line.setAttribute('stroke', 'var(--primary-color)');
-          line.setAttribute('stroke-width', '3');
-          line.setAttribute('stroke-dasharray', '8 8');
-          overlay.appendChild(line);
-          const poly = document.createElementNS('http://www.w3.org/2000/svg','polygon');
-          poly.setAttribute('points', arrowHead(entPx, px));
-          poly.setAttribute('fill', 'var(--primary-color)');
-          overlay.appendChild(poly);
+          const pathPoints = buildPath(entPx, px, {x:p.x, y:p.y});
+          if (pathPoints && pathPoints.length >= 2){
+            const polyline = document.createElementNS('http://www.w3.org/2000/svg','polyline');
+            polyline.setAttribute('points', pathPoints.map(pt => `${pt.x},${pt.y}`).join(' '));
+            polyline.setAttribute('fill', 'none');
+            polyline.setAttribute('stroke', 'var(--primary-color)');
+            polyline.setAttribute('stroke-width', '3');
+            polyline.setAttribute('stroke-linejoin', 'round');
+            polyline.setAttribute('stroke-linecap', 'round');
+            polyline.setAttribute('stroke-dasharray', '8 8');
+            overlay.appendChild(polyline);
 
-          const dot = document.createElement('div');
-          dot.className = 'path-dot';
-          pins.appendChild(dot);
-          let forward = true;
-          setInterval(()=>{
-            if (forward) { dot.style.left = px.x-6+'px'; dot.style.top = px.y-6+'px'; }
-            else { dot.style.left = entPx.x-6+'px'; dot.style.top = entPx.y-6+'px'; }
-            forward = !forward;
-          }, 1200);
-          dot.style.left = entPx.x-6+'px'; dot.style.top = entPx.y-6+'px';
+            const headFrom = pathPoints[pathPoints.length - 2];
+            const headTo = pathPoints[pathPoints.length - 1];
+            const poly = document.createElementNS('http://www.w3.org/2000/svg','polygon');
+            poly.setAttribute('points', arrowHead(headFrom, headTo));
+            poly.setAttribute('fill', 'var(--primary-color)');
+            overlay.appendChild(poly);
+
+            const dot = document.createElement('div');
+            dot.className = 'path-dot';
+            pins.appendChild(dot);
+            activeDot = dot;
+            animateDotAlong(pathPoints, dot);
+          } else {
+            const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+            line.setAttribute('x1', entPx.x); line.setAttribute('y1', entPx.y);
+            line.setAttribute('x2', px.x);    line.setAttribute('y2', px.y);
+            line.setAttribute('stroke', 'var(--primary-color)');
+            line.setAttribute('stroke-width', '3');
+            line.setAttribute('stroke-dasharray', '8 8');
+            overlay.appendChild(line);
+            const poly = document.createElementNS('http://www.w3.org/2000/svg','polygon');
+            poly.setAttribute('points', arrowHead(entPx, px));
+            poly.setAttribute('fill', 'var(--primary-color)');
+            overlay.appendChild(poly);
+
+            const dot = document.createElement('div');
+            dot.className = 'path-dot';
+            pins.appendChild(dot);
+            activeDot = dot;
+            dot.style.left = entPx.x-6+'px';
+            dot.style.top = entPx.y-6+'px';
+            animateDotAlong([entPx, px], dot);
+          }
         }
       }
     }
@@ -211,6 +255,300 @@
 
     queryEl.addEventListener('input', renderList);
     loadAll();
+
+    function analyzeWalkableGrid(){
+      if (!img.naturalWidth || !img.naturalHeight) return;
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      const cellSize = Math.max(3, Math.round(Math.min(canvas.width, canvas.height) / 180));
+      const cols = Math.max(1, Math.floor(canvas.width / cellSize));
+      const rows = Math.max(1, Math.floor(canvas.height / cellSize));
+      const grid = Array.from({ length: rows }, () => Array(cols).fill(false));
+      const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      for (let row = 0; row < rows; row++){
+        for (let col = 0; col < cols; col++){
+          let brightCount = 0;
+          let sampleCount = 0;
+          const samples = [
+            [0.5, 0.5],
+            [0.2, 0.5],
+            [0.8, 0.5],
+            [0.5, 0.2],
+            [0.5, 0.8],
+            [0.2, 0.2],
+            [0.8, 0.2],
+            [0.2, 0.8],
+            [0.8, 0.8]
+          ];
+          for (const [sx, sy] of samples){
+            const px = Math.min(canvas.width - 1, Math.floor((col + sx) * cellSize));
+            const py = Math.min(canvas.height - 1, Math.floor((row + sy) * cellSize));
+            const idx = (py * canvas.width + px) * 4;
+            const alpha = data[idx + 3] / 255;
+            if (alpha < 0.05) continue;
+            sampleCount++;
+            const brightness = (data[idx] + data[idx + 1] + data[idx + 2]) / (3 * 255);
+            if (brightness >= 0.93){
+              brightCount++;
+            }
+          }
+          grid[row][col] = sampleCount > 0 && (brightCount / sampleCount) >= 0.8;
+        }
+      }
+      walkableGrid = {
+        grid,
+        rows,
+        cols,
+        cellSize,
+        width: canvas.width,
+        height: canvas.height
+      };
+    }
+
+    function buildPath(entPx, targetPx, targetPercent){
+      if (!walkableGrid){
+        return [entPx, targetPx];
+      }
+      const entrancePercent = config.entrance;
+      const walkwayPath = findWalkablePath(entrancePercent, targetPercent);
+      if (!walkwayPath || walkwayPath.length === 0){
+        return [entPx, targetPx];
+      }
+      const pathPercents = walkwayPath.map(gridToPercent).map(simplifyPercentPrecision);
+      const combined = [];
+      combined.push(entrancePercent);
+      pathPercents.forEach((pt, index) => {
+        if (index === 0 && isClose(pt, entrancePercent)) return;
+        if (index === pathPercents.length - 1 && isClose(pt, targetPercent)) return;
+        combined.push(pt);
+      });
+      const targetNode = percentToGrid(targetPercent);
+      if (isWalkable(targetNode.x, targetNode.y)){
+        combined.push(targetPercent);
+      }
+      const pxPoints = combined.map(percent => percentToPx(mapWrap, percent));
+      return dedupePoints(pxPoints);
+    }
+
+    function simplifyPercentPrecision(pt){
+      return { x: Number(pt.x.toFixed(4)), y: Number(pt.y.toFixed(4)) };
+    }
+
+    function dedupePoints(points){
+      if (points.length <= 1) return points;
+      const result = [points[0]];
+      for (let i = 1; i < points.length; i++){
+        const prev = result[result.length - 1];
+        const current = points[i];
+        if (Math.hypot(prev.x - current.x, prev.y - current.y) < 0.5){
+          continue;
+        }
+        result.push(current);
+      }
+      return result;
+    }
+
+    function isClose(a, b){
+      return Math.hypot(a.x - b.x, a.y - b.y) < 0.1;
+    }
+
+    function percentToGrid(percent){
+      const xPx = (percent.x / 100) * walkableGrid.width;
+      const yPx = (percent.y / 100) * walkableGrid.height;
+      return {
+        x: clamp(Math.floor(xPx / walkableGrid.cellSize), 0, walkableGrid.cols - 1),
+        y: clamp(Math.floor(yPx / walkableGrid.cellSize), 0, walkableGrid.rows - 1)
+      };
+    }
+
+    function gridToPercent(node){
+      return {
+        x: ((node.x + 0.5) * walkableGrid.cellSize / walkableGrid.width) * 100,
+        y: ((node.y + 0.5) * walkableGrid.cellSize / walkableGrid.height) * 100
+      };
+    }
+
+    function nodeKey(x, y){
+      return `${x},${y}`;
+    }
+
+    function isWalkable(x, y){
+      return x >= 0 && x < walkableGrid.cols && y >= 0 && y < walkableGrid.rows && walkableGrid.grid[y][x];
+    }
+
+    function nearestWalkable(start){
+      if (isWalkable(start.x, start.y)) return start;
+      const visited = new Set([nodeKey(start.x, start.y)]);
+      const queue = [start];
+      const directions = [
+        {x:1,y:0}, {x:-1,y:0}, {x:0,y:1}, {x:0,y:-1}
+      ];
+      while (queue.length){
+        const current = queue.shift();
+        for (const dir of directions){
+          const nx = current.x + dir.x;
+          const ny = current.y + dir.y;
+          const key = nodeKey(nx, ny);
+          if (nx < 0 || ny < 0 || nx >= walkableGrid.cols || ny >= walkableGrid.rows || visited.has(key)){
+            continue;
+          }
+          if (isWalkable(nx, ny)){
+            return { x: nx, y: ny };
+          }
+          visited.add(key);
+          queue.push({ x: nx, y: ny });
+        }
+      }
+      return null;
+    }
+
+    function reconstructPath(cameFrom, current){
+      const path = [current];
+      let key = nodeKey(current.x, current.y);
+      while (cameFrom.has(key)){
+        const prev = cameFrom.get(key);
+        path.push(prev);
+        key = nodeKey(prev.x, prev.y);
+      }
+      return path.reverse();
+    }
+
+    function findWalkablePath(startPercent, endPercent){
+      const startNode = percentToGrid(startPercent);
+      const endNode = percentToGrid(endPercent);
+      const start = nearestWalkable(startNode);
+      const goal = nearestWalkable(endNode);
+      if (!start || !goal) return null;
+      const open = [{ x: start.x, y: start.y, g: 0, f: heuristic(start, goal) }];
+      const cameFrom = new Map();
+      const gScore = new Map([[nodeKey(start.x, start.y), 0]]);
+      const visited = new Set();
+      while (open.length){
+        open.sort((a, b) => a.f - b.f);
+        const current = open.shift();
+        const key = nodeKey(current.x, current.y);
+        if (visited.has(key)) continue;
+        if (current.x === goal.x && current.y === goal.y){
+          return simplifyPath(reconstructPath(cameFrom, current));
+        }
+        visited.add(key);
+        const neighbors = [
+          { x: current.x + 1, y: current.y },
+          { x: current.x - 1, y: current.y },
+          { x: current.x, y: current.y + 1 },
+          { x: current.x, y: current.y - 1 }
+        ];
+        for (const nb of neighbors){
+          if (!isWalkable(nb.x, nb.y)) continue;
+          const nKey = nodeKey(nb.x, nb.y);
+          const tentativeG = current.g + 1;
+          if (visited.has(nKey)) continue;
+          const knownG = gScore.has(nKey) ? gScore.get(nKey) : Infinity;
+          if (tentativeG < knownG){
+            cameFrom.set(nKey, { x: current.x, y: current.y });
+            gScore.set(nKey, tentativeG);
+            open.push({ x: nb.x, y: nb.y, g: tentativeG, f: tentativeG + heuristic(nb, goal) });
+          }
+        }
+      }
+      return null;
+    }
+
+    function heuristic(a, b){
+      return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+    }
+
+    function simplifyPath(path){
+      if (path.length <= 2) return path;
+      const result = [path[0]];
+      for (let i = 1; i < path.length - 1; i++){
+        const prev = result[result.length - 1];
+        const current = path[i];
+        const next = path[i + 1];
+        const d1x = current.x - prev.x;
+        const d1y = current.y - prev.y;
+        const d2x = next.x - current.x;
+        const d2y = next.y - current.y;
+        if ((d1x === 0 && d2x === 0) || (d1y === 0 && d2y === 0)){
+          continue;
+        }
+        result.push(current);
+      }
+      result.push(path[path.length - 1]);
+      return result;
+    }
+
+    function animateDotAlong(points, dot){
+      if (!points || points.length < 2) return;
+      const segments = [];
+      let totalLength = 0;
+      for (let i = 0; i < points.length - 1; i++){
+        const start = points[i];
+        const end = points[i + 1];
+        const length = Math.hypot(end.x - start.x, end.y - start.y);
+        segments.push({ start, end, length });
+        totalLength += length;
+      }
+      if (totalLength === 0) return;
+      const duration = 1800;
+      let direction = 1;
+      let progress = 0;
+      let lastTimestamp = null;
+      dot.style.left = points[0].x - 6 + 'px';
+      dot.style.top = points[0].y - 6 + 'px';
+
+      function step(timestamp){
+        if (lastTimestamp === null){
+          lastTimestamp = timestamp;
+        }
+        const delta = timestamp - lastTimestamp;
+        lastTimestamp = timestamp;
+        progress += (delta / duration) * direction;
+        if (progress >= 1){
+          progress = 1;
+          direction = -1;
+        } else if (progress <= 0){
+          progress = 0;
+          direction = 1;
+        }
+        const distance = progress * totalLength;
+        const pos = pointAtDistance(distance, segments);
+        dot.style.left = pos.x - 6 + 'px';
+        dot.style.top = pos.y - 6 + 'px';
+        dotAnimationId = requestAnimationFrame(step);
+      }
+      dotAnimationId = requestAnimationFrame(step);
+    }
+
+    function pointAtDistance(distance, segments){
+      let remaining = distance;
+      for (const segment of segments){
+        if (remaining <= segment.length){
+          const t = segment.length === 0 ? 0 : remaining / segment.length;
+          return {
+            x: segment.start.x + (segment.end.x - segment.start.x) * t,
+            y: segment.start.y + (segment.end.y - segment.start.y) * t
+          };
+        }
+        remaining -= segment.length;
+      }
+      const last = segments[segments.length - 1];
+      return { x: last.end.x, y: last.end.y };
+    }
+
+    function stopDotAnimation(){
+      if (dotAnimationId){
+        cancelAnimationFrame(dotAnimationId);
+        dotAnimationId = null;
+      }
+      if (activeDot){
+        activeDot.remove();
+        activeDot = null;
+      }
+    }
   </script>
 </body>
 </html>
