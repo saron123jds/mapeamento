@@ -7,51 +7,85 @@
   <link rel="stylesheet" href="/css/style.css"/>
 </head>
 <body class="page page--totem">
-  <header class="app-header app-header--hero">
-    <div class="brand">
-      <div class="brand__logo" id="totemLogoWrap" hidden>
-        <img id="totemLogo" alt="Logo do totem"/>
+  <div id="welcomeScreen" class="welcome-screen">
+    <div class="welcome-screen__card">
+      <div class="welcome-screen__body">
+        <div>
+          <span class="eyebrow">Bem-vindo(a) ao totem</span>
+          <h1>Encontre qualquer produto em poucos toques</h1>
+          <p class="muted">Siga os passos abaixo para começar o atendimento.</p>
+        </div>
+        <ul class="welcome-screen__steps">
+          <li><strong>1.</strong> Toque em <em>Iniciar atendimento</em> para abrir a busca.</li>
+          <li><strong>2.</strong> Digite o nome, categoria ou corredor do produto desejado.</li>
+          <li><strong>3.</strong> Selecione o item para ver a rota no mapa e leve o caminho no celular com o QR Code.</li>
+        </ul>
       </div>
-      <div>
-        <span class="eyebrow">Bem-vindo(a) ao</span>
-        <h1 class="brand__title" id="totemBrandName">MapaFácil Market</h1>
-        <p class="muted">Use o buscador inteligente para encontrar produtos e veja o caminho a partir do totem.</p>
+      <div class="welcome-screen__actions">
+        <button id="startBtn" class="button button--full">Iniciar atendimento</button>
+        <p class="muted">O totem volta para esta tela automaticamente quando terminar.</p>
       </div>
     </div>
-    <nav class="toolbar">
-      <a class="button button--ghost" href="/admin">Admin</a>
-    </nav>
-  </header>
+  </div>
 
-  <main class="page-grid page-grid--totem">
-    <section class="card card--search">
-      <div class="card__body">
-        <label class="field field--stretch">
-          <span class="label">Busque por nome, categoria ou corredor</span>
-          <div class="search-bar">
-            <span class="search-bar__icon">🔍</span>
-            <input class="input input--search" id="query" placeholder="Ex: leite, padaria, corredor 5" autocomplete="off"/>
+  <div id="experience" hidden>
+    <header class="app-header app-header--hero">
+      <div class="brand">
+        <div class="brand__logo" id="totemLogoWrap" hidden>
+          <img id="totemLogo" alt="Logo do totem"/>
+        </div>
+        <div>
+          <span class="eyebrow">Bem-vindo(a) ao</span>
+          <h1 class="brand__title" id="totemBrandName">MapaFácil Market</h1>
+          <p class="muted">Use o buscador inteligente para encontrar produtos e veja o caminho a partir do totem.</p>
+        </div>
+      </div>
+      <nav class="toolbar toolbar--gap-lg">
+        <button id="finishBtn" class="button button--ghost danger" type="button">Finalizar atendimento</button>
+        <a class="button button--ghost" href="/admin">Admin</a>
+      </nav>
+    </header>
+
+    <main class="page-grid page-grid--totem">
+      <section class="card card--search">
+        <div class="card__body">
+          <label class="field field--stretch">
+            <span class="label">Busque por nome, categoria ou corredor</span>
+            <div class="search-bar">
+              <span class="search-bar__icon">🔍</span>
+              <input class="input input--search" id="query" placeholder="Ex: leite, padaria, corredor 5" autocomplete="off"/>
+            </div>
+          </label>
+        </div>
+        <div id="mapWrap" class="map-wrap map-wrap--tall">
+          <img id="mapImg" alt="Mapa" class="map-wrap__img"/>
+          <div id="pins" class="map-wrap__pins"></div>
+          <svg id="overlay" class="map-wrap__overlay" width="100%" height="100%"></svg>
+          <div class="map-wrap__hint">Toque em um item da lista para ver o caminho até ele.</div>
+        </div>
+        <div id="qrBox" class="qr-box" hidden>
+          <div class="qr-box__image">
+            <div id="qrPlaceholder" class="qr-box__status">Selecione um produto para gerar o QR Code.</div>
+            <img id="qrImage" alt="QR Code para abrir no celular" hidden/>
           </div>
-        </label>
-      </div>
-      <div id="mapWrap" class="map-wrap map-wrap--tall">
-        <img id="mapImg" alt="Mapa" class="map-wrap__img"/>
-        <div id="pins" class="map-wrap__pins"></div>
-        <svg id="overlay" class="map-wrap__overlay" width="100%" height="100%"></svg>
-        <div class="map-wrap__hint">Toque em um item da lista para ver o caminho até ele.</div>
-      </div>
-    </section>
+          <p id="qrMessage" class="qr-box__status"></p>
+          <div class="qr-box__link">
+            <a id="qrLink" class="button button--ghost" target="_blank" rel="noopener" hidden>Abrir no celular</a>
+          </div>
+        </div>
+      </section>
 
-    <section class="card card--results">
-      <div class="card__header">
-        <h2>Resultados</h2>
-        <p class="muted">Selecione um item para visualizar a rota no mapa.</p>
-      </div>
-      <div class="card__body">
-        <div class="list" id="list"></div>
-      </div>
-    </section>
-  </main>
+      <section class="card card--results">
+        <div class="card__header">
+          <h2>Resultados</h2>
+          <p class="muted">Selecione um item para visualizar a rota no mapa.</p>
+        </div>
+        <div class="card__body">
+          <div class="list" id="list"></div>
+        </div>
+      </section>
+    </main>
+  </div>
 
   <script type="module">
     import { percentToPx, arrowHead, clamp } from '/js/utils.js';
@@ -65,6 +99,15 @@
     const totemBrandName = document.getElementById('totemBrandName');
     const totemLogoWrap = document.getElementById('totemLogoWrap');
     const totemLogo = document.getElementById('totemLogo');
+    const welcomeScreen = document.getElementById('welcomeScreen');
+    const experience = document.getElementById('experience');
+    const startBtn = document.getElementById('startBtn');
+    const finishBtn = document.getElementById('finishBtn');
+    const qrBox = document.getElementById('qrBox');
+    const qrImage = document.getElementById('qrImage');
+    const qrPlaceholder = document.getElementById('qrPlaceholder');
+    const qrMessage = document.getElementById('qrMessage');
+    const qrLink = document.getElementById('qrLink');
 
     let products = [];
     let config = { mapImage: "", entrance: {x:5,y:95}, theme: {} };
@@ -73,6 +116,13 @@
     let dotAnimationId = null;
     let activeDot = null;
     let currentMapImage = '';
+    let currentView = 'welcome';
+    let inactivityTimer = null;
+    let shareProductId = null;
+    let qrLibPromise = null;
+    let dataLoaded = false;
+
+    const INACTIVITY_TIMEOUT = 2 * 60 * 1000;
 
     const DEFAULT_THEME = {
       primaryColor: '#2563eb',
@@ -85,12 +135,191 @@
       brandName: 'MapaFácil Market'
     };
 
-    async function loadAll(){
-      products = await (await fetch('/api/products')).json();
-      config = await (await fetch('/api/config')).json();
-      applyTheme(config.theme);
+    function setQrPlaceholder(text = ''){
+      if (!qrPlaceholder) return;
+      qrPlaceholder.textContent = text || '';
+      qrPlaceholder.hidden = !text;
+    }
+
+    function setQrMessage(text = '', isError = false){
+      if (!qrMessage) return;
+      qrMessage.textContent = text || '';
+      qrMessage.hidden = !text;
+      qrMessage.classList.toggle('qr-box__status--error', !!isError);
+    }
+
+    function hideQrLink(){
+      if (!qrLink) return;
+      qrLink.hidden = true;
+      qrLink.removeAttribute('href');
+    }
+
+    function showQrLink(url){
+      if (!qrLink) return;
+      qrLink.hidden = false;
+      qrLink.href = url;
+    }
+
+    function clearShare(){
+      shareProductId = null;
+      if (qrBox){
+        qrBox.hidden = true;
+      }
+      if (qrImage){
+        qrImage.src = '';
+        qrImage.hidden = true;
+      }
+      setQrPlaceholder('Selecione um produto para gerar o QR Code.');
+      setQrMessage('');
+      hideQrLink();
+    }
+
+    async function loadQrLib(){
+      if (!qrLibPromise){
+        qrLibPromise = import('https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/esm/index.min.js')
+          .then(mod => mod?.default || mod)
+          .catch(err => {
+            console.error('Falha ao carregar a biblioteca de QR Code', err);
+            return null;
+          });
+      }
+      return qrLibPromise;
+    }
+
+    async function showShareForProduct(product){
+      if (!product){
+        clearShare();
+        return;
+      }
+      shareProductId = product.id;
+      if (qrBox){
+        qrBox.hidden = false;
+      }
+      if (qrImage){
+        qrImage.hidden = true;
+      }
+      setQrPlaceholder('Gerando QR Code...');
+      setQrMessage('Aponte a câmera do celular para continuar o caminho.');
+      hideQrLink();
+      let shareUrl = '';
+      try {
+        const res = await fetch(`/api/share/${encodeURIComponent(product.id)}`);
+        if (!res.ok) throw new Error('share-failed');
+        const data = await res.json();
+        shareUrl = data.url;
+        const qrLib = await loadQrLib();
+        if (!qrLib || typeof qrLib.toDataURL !== 'function'){ throw new Error('qr-lib'); }
+        const dataUrl = await qrLib.toDataURL(shareUrl, { width: 260, margin: 1 });
+        if (shareProductId !== product.id) return;
+        if (qrImage){
+          qrImage.src = dataUrl;
+          qrImage.hidden = false;
+        }
+        setQrPlaceholder('');
+        setQrMessage('Escaneie o código ou toque em "Abrir no celular" para continuar.');
+        showQrLink(shareUrl);
+      } catch (err) {
+        console.error('Erro ao gerar QR Code', err);
+        if (shareProductId !== product?.id) return;
+        if (qrImage){
+          qrImage.hidden = true;
+        }
+        setQrPlaceholder('Não foi possível gerar o QR Code.');
+        setQrMessage('Verifique a conexão com a internet e tente novamente.', true);
+        if (shareUrl){
+          showQrLink(shareUrl);
+        } else {
+          hideQrLink();
+        }
+      }
+    }
+
+    function stopInactivityTimer(){
+      if (inactivityTimer){
+        clearTimeout(inactivityTimer);
+        inactivityTimer = null;
+      }
+    }
+
+    function resetSearchState(){
+      if (queryEl){
+        queryEl.value = '';
+      }
+      activeId = null;
+      if (list){
+        list.innerHTML = '';
+      }
+      clearShare();
+      renderMap();
+    }
+
+    function showWelcomeScreen(){
+      currentView = 'welcome';
+      stopInactivityTimer();
+      if (welcomeScreen){
+        welcomeScreen.hidden = false;
+        welcomeScreen.removeAttribute('hidden');
+      }
+      if (experience){
+        experience.hidden = true;
+        experience.setAttribute('hidden', '');
+      }
+      resetSearchState();
+    }
+
+    function enterSearchMode(){
+      currentView = 'search';
+      if (welcomeScreen){
+        welcomeScreen.hidden = true;
+        welcomeScreen.setAttribute('hidden', '');
+      }
+      if (experience){
+        experience.hidden = false;
+        experience.removeAttribute('hidden');
+      }
       renderMap();
       renderList();
+      resetInactivityTimer();
+      setTimeout(() => {
+        try {
+          queryEl?.focus({ preventScroll: true });
+        } catch (err) {
+          queryEl?.focus();
+        }
+      }, 50);
+    }
+
+    function resetInactivityTimer(){
+      if (currentView !== 'search') return;
+      stopInactivityTimer();
+      inactivityTimer = setTimeout(() => {
+        showWelcomeScreen();
+      }, INACTIVITY_TIMEOUT);
+    }
+
+    function handleUserActivity(){
+      if (currentView === 'search'){
+        resetInactivityTimer();
+      }
+    }
+
+    async function loadAll(){
+      try {
+        const [productsRes, configRes] = await Promise.all([
+          fetch('/api/products'),
+          fetch('/api/config')
+        ]);
+        products = await productsRes.json();
+        config = await configRes.json();
+        dataLoaded = true;
+        applyTheme(config.theme);
+      } catch (err) {
+        console.error('Erro ao carregar dados do totem', err);
+        dataLoaded = true;
+      } finally {
+        renderMap();
+        renderList();
+      }
     }
 
     function applyTheme(theme = {}){
@@ -143,6 +372,9 @@
       overlay.innerHTML = '';
       pins.innerHTML = '';
       stopDotAnimation();
+      if (!activeId){
+        clearShare();
+      }
       if (config.mapImage){
         if (currentMapImage !== config.mapImage){
           currentMapImage = config.mapImage;
@@ -221,13 +453,33 @@
       pins.appendChild(pin);
     }
 
+    function selectProduct(product){
+      if (!product) return;
+      activeId = product.id;
+      renderMap();
+      showShareForProduct(product);
+      handleUserActivity();
+    }
+
     function renderList(){
       list.innerHTML = '';
+      list.scrollTop = 0;
+      if (!dataLoaded){
+        const loading = document.createElement('div');
+        loading.className = 'empty-state';
+        loading.innerHTML = '<strong>Carregando produtos...</strong><p class="muted">Aguarde alguns instantes.</p>';
+        list.appendChild(loading);
+        return;
+      }
       const q = (queryEl.value||'').toLowerCase().trim();
       const items = products.filter(p => {
         return !q || p.name.toLowerCase().includes(q) || (p.category||'').toLowerCase().includes(q) || (p.aisle||'').toLowerCase().includes(q);
       });
       if (items.length===0){
+        if (activeId){
+          activeId = null;
+          renderMap();
+        }
         const empty = document.createElement('div');
         empty.className = 'empty-state';
         empty.innerHTML = '<strong>Nada encontrado.</strong><p class="muted">Tente outros termos ou confira se o produto está cadastrado.</p>';
@@ -248,12 +500,32 @@
           </div>
           <span class="result-card__cta">Ver rota →</span>
         `;
-        item.onclick = () => { activeId = p.id; renderMap(); };
+        item.onclick = () => selectProduct(p);
         list.appendChild(item);
       });
     }
 
-    queryEl.addEventListener('input', renderList);
+    startBtn?.addEventListener('click', () => {
+      enterSearchMode();
+      handleUserActivity();
+    });
+
+    finishBtn?.addEventListener('click', () => {
+      showWelcomeScreen();
+    });
+
+    ['pointerdown','keydown','touchstart'].forEach(evt => {
+      document.addEventListener(evt, handleUserActivity, { passive: true });
+    });
+
+    queryEl.addEventListener('input', () => {
+      renderList();
+      handleUserActivity();
+    });
+
+    queryEl.addEventListener('focus', handleUserActivity);
+
+    showWelcomeScreen();
     loadAll();
 
     function analyzeWalkableGrid(){

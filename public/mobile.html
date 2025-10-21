@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>MapaFácil Market – Localização do Produto</title>
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body class="page page--mobile">
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand__logo" id="mobileLogoWrap" hidden>
+        <img id="mobileLogo" alt="Logo"/>
+      </div>
+      <div>
+        <span class="eyebrow">Mapa do Mercado</span>
+        <h1 class="brand__title" id="mobileBrandName">MapaFácil Market</h1>
+        <p class="muted" id="mobileSubtitle">Veja abaixo a localização do produto selecionado.</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="page-grid page-grid--single">
+    <section class="card">
+      <div class="card__header">
+        <h2 id="productTitle">Carregando produto...</h2>
+        <p class="muted" id="productMeta"></p>
+      </div>
+      <div class="card__body">
+        <div class="map-wrap" id="mapWrap">
+          <img id="mapImg" alt="Mapa" class="map-wrap__img"/>
+          <div id="pins" class="map-wrap__pins"></div>
+          <svg id="overlay" class="map-wrap__overlay" width="100%" height="100%"></svg>
+          <div class="map-wrap__hint" id="mapHint">Seja guiado pela entrada até o produto.</div>
+        </div>
+        <div class="info" id="statusMessage"></div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { percentToPx, arrowHead } from '/js/utils.js';
+
+    const params = new URLSearchParams(window.location.search);
+    const productId = params.get('id');
+
+    const mapWrap = document.getElementById('mapWrap');
+    const mapImg = document.getElementById('mapImg');
+    const pins = document.getElementById('pins');
+    const overlay = document.getElementById('overlay');
+    const productTitle = document.getElementById('productTitle');
+    const productMeta = document.getElementById('productMeta');
+    const statusMessage = document.getElementById('statusMessage');
+    const brandName = document.getElementById('mobileBrandName');
+    const mobileLogoWrap = document.getElementById('mobileLogoWrap');
+    const mobileLogo = document.getElementById('mobileLogo');
+
+    const DEFAULT_THEME = {
+      primaryColor: '#2563eb',
+      secondaryColor: '#1d4ed8',
+      backgroundColor: '#f8fafc',
+      surfaceColor: '#ffffff',
+      textColor: '#0f172a',
+      accentColor: '#f97316',
+      logo: '',
+      brandName: 'MapaFácil Market'
+    };
+
+    let config = null;
+    let product = null;
+
+    if (!productId){
+      showStatus('Não foi possível identificar o produto. Verifique o QR Code e tente novamente.');
+    } else {
+      loadData();
+    }
+
+    function applyTheme(theme = {}){
+      const merged = { ...DEFAULT_THEME, ...theme };
+      const root = document.documentElement;
+      root.style.setProperty('--primary-color', merged.primaryColor);
+      root.style.setProperty('--primary-color-strong', merged.secondaryColor || merged.primaryColor);
+      root.style.setProperty('--accent-color', merged.accentColor);
+      root.style.setProperty('--background-color', merged.backgroundColor);
+      root.style.setProperty('--surface-color', merged.surfaceColor);
+      root.style.setProperty('--text-color', merged.textColor);
+      root.style.setProperty('--text-muted', shadeColor(merged.textColor, 45));
+      brandName.textContent = merged.brandName || DEFAULT_THEME.brandName;
+      if (merged.logo){
+        mobileLogo.src = merged.logo;
+        mobileLogoWrap.hidden = false;
+      } else {
+        mobileLogo.src = '';
+        mobileLogoWrap.hidden = true;
+      }
+    }
+
+    function shadeColor(hex, percent){
+      if (!hex) return '#64748b';
+      const num = parseInt(hex.replace('#',''), 16);
+      const amt = Math.round(2.55 * percent);
+      const r = (num >> 16) + amt;
+      const g = (num >> 8 & 0x00FF) + amt;
+      const b = (num & 0x0000FF) + amt;
+      return '#' + (
+        0x1000000 +
+        (r<255?(r<0?0:r):255)*0x10000 +
+        (g<255?(g<0?0:g):255)*0x100 +
+        (b<255?(b<0?0:b):255)
+      ).toString(16).slice(1);
+    }
+
+    async function loadData(){
+      try {
+        const [configRes, productRes] = await Promise.all([
+          fetch('/api/config'),
+          fetch(`/api/products/${encodeURIComponent(productId)}`)
+        ]);
+        if (!productRes.ok){
+          throw new Error('Produto não encontrado');
+        }
+        config = await configRes.json();
+        product = await productRes.json();
+        applyTheme(config.theme);
+        updateProductInfo();
+        prepareMap();
+      } catch (err) {
+        console.error(err);
+        showStatus('Não foi possível carregar os dados do produto. Tente novamente mais tarde.');
+      }
+    }
+
+    function updateProductInfo(){
+      if (!product){
+        productTitle.textContent = 'Produto indisponível';
+        productMeta.textContent = '';
+        return;
+      }
+      productTitle.textContent = product.name || 'Produto sem nome';
+      const parts = [];
+      if (product.category) parts.push(product.category);
+      if (product.aisle) parts.push(`Corredor ${product.aisle}`);
+      if (product.shelf) parts.push(`Prateleira ${product.shelf}`);
+      if (product.side) parts.push(product.side);
+      productMeta.textContent = parts.join(' • ');
+      document.title = `${product.name} – Localização`;
+    }
+
+    function showStatus(message){
+      statusMessage.textContent = message;
+      statusMessage.style.display = message ? 'block' : 'none';
+    }
+
+    function prepareMap(){
+      if (!config?.mapImage){
+        showStatus('O mapa do mercado não está configurado.');
+        return;
+      }
+      mapImg.src = config.mapImage;
+    }
+
+    mapImg.addEventListener('load', () => {
+      renderMap();
+      showStatus('');
+    });
+
+    mapImg.addEventListener('error', () => {
+      showStatus('Não foi possível carregar o mapa no momento.');
+    });
+
+    window.addEventListener('resize', () => {
+      if (product && mapImg.complete && mapImg.naturalWidth){
+        renderMap();
+      }
+    });
+
+    function renderMap(){
+      pins.innerHTML = '';
+      overlay.innerHTML = '';
+      if (!product || product.x == null || product.y == null){
+        showStatus('Este produto ainda não possui localização no mapa.');
+        return;
+      }
+      const entrancePx = percentToPx(mapWrap, config.entrance);
+      const productPx = percentToPx(mapWrap, { x: product.x, y: product.y });
+      addPin(entrancePx.x, entrancePx.y, 'Você está aqui');
+      addPin(productPx.x, productPx.y, product.name);
+      drawGuide(entrancePx, productPx);
+    }
+
+    function addPin(x, y, label){
+      const pin = document.createElement('div');
+      pin.className = 'pin pin--mobile';
+      pin.style.left = `${x}px`;
+      pin.style.top = `${y}px`;
+      pin.innerHTML = '<div class="pin-pulse"></div><div class="pin-dot"></div>' + (label ? `<div class="pin-label">${label}</div>` : '');
+      pins.appendChild(pin);
+    }
+
+    function drawGuide(from, to){
+      const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+      line.setAttribute('x1', from.x);
+      line.setAttribute('y1', from.y);
+      line.setAttribute('x2', to.x);
+      line.setAttribute('y2', to.y);
+      line.setAttribute('stroke', 'var(--primary-color)');
+      line.setAttribute('stroke-width', '3');
+      line.setAttribute('stroke-dasharray', '8 8');
+      overlay.appendChild(line);
+      const arrow = document.createElementNS('http://www.w3.org/2000/svg','polygon');
+      arrow.setAttribute('points', arrowHead(from, to));
+      arrow.setAttribute('fill', 'var(--primary-color)');
+      overlay.appendChild(arrow);
+    }
+  </script>
+</body>
+</html>
