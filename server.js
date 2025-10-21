@@ -90,6 +90,15 @@ app.get('/api/products', (req, res) => {
   res.json(readJSON(PRODUCTS_FILE));
 });
 
+app.get('/api/products/:id', (req, res) => {
+  const products = readJSON(PRODUCTS_FILE);
+  const product = products.find(p => p.id === req.params.id);
+  if (!product){
+    return res.status(404).json({ error: 'not found' });
+  }
+  res.json(product);
+});
+
 app.post('/api/products', (req, res) => {
   const products = readJSON(PRODUCTS_FILE);
   const body = req.body || {};
@@ -125,6 +134,18 @@ app.delete('/api/products/:id', (req, res) => {
   const next = products.filter(p => p.id !== req.params.id);
   writeJSON(PRODUCTS_FILE, next);
   res.json({ ok: true });
+});
+
+app.get('/api/share/:id', (req, res) => {
+  const products = readJSON(PRODUCTS_FILE);
+  const product = products.find(p => p.id === req.params.id);
+  if (!product){
+    return res.status(404).json({ error: 'not found' });
+  }
+  const host = req.get('host');
+  const protocol = req.protocol;
+  const url = `${protocol}://${host}/mobile.html?id=${encodeURIComponent(product.id)}`;
+  res.json({ url });
 });
 
 app.get('/api/config', (req, res) => {
@@ -175,6 +196,7 @@ app.post('/api/upload-logo', upload.single('logo'), (req, res) => {
 // Fallback to index.html
 app.get('/admin', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'admin.html')));
 app.get('/totem', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'totem.html')));
+app.get('/mobile', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'mobile.html')));
 
 app.listen(PORT, () => {
   console.log(`MapaFácil Market rodando em http://localhost:${PORT}`);
