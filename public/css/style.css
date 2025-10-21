@@ -1,0 +1,24 @@
+
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: #f7f7f8; color: #111; }
+header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #fff; border-bottom: 1px solid #e5e7eb;}
+.container { max-width: 1100px; margin: 16px auto; padding: 0 16px; }
+.card { background: #fff; border: 1px solid #e5e7eb; border-radius: 16px; padding: 16px; box-shadow: 0 1px 0 rgba(0,0,0,0.02); }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.button { padding: 10px 14px; border-radius: 10px; border: 1px solid #111; background: #111; color: #fff; cursor: pointer; }
+.button.secondary { background: #fff; color: #111; }
+.input, .select, .file { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid #d1d5db; }
+.label { font-size: 12px; color: #6b7280; margin-bottom: 4px; display:block; }
+.map-wrap { position: relative; border: 1px solid #e5e7eb; border-radius: 16px; overflow: hidden; min-height: 360px; background: repeating-linear-gradient(45deg,#fafafa,#fafafa 10px,#f3f4f6 10px,#f3f4f6 20px); }
+.pin { position:absolute; transform: translate(-50%, -100%); }
+.pin-dot { width: 10px; height: 10px; border-radius: 999px; background: #e11d48; box-shadow: 0 0 0 2px rgba(225,29,72,0.2); }
+.pin-pulse { position:absolute; width: 12px; height: 12px; border-radius: 999px; background:#e11d48; opacity:.5; top:-2px; left:-2px; animation: ping 1.2s infinite; }
+.pin-label { margin-top: 4px; padding: 2px 6px; border-radius: 6px; background: rgba(0,0,0,.7); color:#fff; font-size: 12px; white-space:nowrap;}
+@keyframes ping { 0%{ transform: scale(1); opacity: .6 } 100%{ transform: scale(2.2); opacity: 0 } }
+.badge { font-size: 11px; color:#6b7280 }
+.list { max-height: 300px; overflow:auto; display:flex; flex-direction:column; gap:10px;}
+.item { border:1px solid #e5e7eb; border-radius:10px; padding:10px; }
+.toolbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap;}
+.small { font-size:12px; color:#6b7280 }
+.hr { height:1px; background:#e5e7eb; margin:12px 0 }
+canvas { image-rendering: crisp-edges; }
